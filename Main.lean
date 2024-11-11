@@ -21,7 +21,7 @@ def sz : Nat := 300000
   let mut m : TreeNode Nat Nat := .leaf
   let mut i := 0
   for s in strings do
-    m ← m.insert cmp s i
+    m := m.insert cmp s i
     i := i + 1
   return m
 

@@ -23,7 +23,6 @@ def size : TreeNode α β → Nat
 instance : Inhabited (TreeNode α β) where
   default := .leaf
 
-
 @[inline] def balanceL (k : α) (v : β) (l r : TreeNode α β) : TreeNode α β :=
   match r with
   | leaf => match l with
@@ -33,9 +32,7 @@ instance : Inhabited (TreeNode α β) where
         .inner 3 lrk lrv (.inner 1 lk lv .leaf .leaf) (.inner 1 k v .leaf .leaf)
     | inner _ lk lv ll@(.inner _ _ _ _ _) .leaf =>
         .inner 3 lk lv ll (.inner 1 k v .leaf .leaf)
-    | inner ls lk lv ll@(.inner lls _ _ _ _) lr@(.inner lrs lrk lrv lrl lrr) =>
-        if lrs < ratio * lls then .inner (1 + ls) lk lv ll (.inner (1 + lrs) k v lr .leaf)
-        else .inner (1 + ls) lrk lrv (.inner (1 + lls + lrl.size) lk lv ll lrl) (.inner (1 + lrr.size) k v lrr .leaf)
+    | _ => panic! "Unexpected"
   | r@(inner rs _ _ _ _) => match l with
     | leaf => .inner (1 + rs) k v .leaf r
     | l@(inner ls lk lv ll lr) =>
@@ -53,9 +50,7 @@ instance : Inhabited (TreeNode α β) where
     | r@(inner _ _ _ .leaf .leaf) => .inner 2 k v .leaf r
     | inner _ rk rv .leaf rr@(.inner _ _ _ _ _) => .inner 3 rk rv (.inner 1 k v .leaf .leaf) rr
     | inner _ rk rv (.inner _ rlk rlv _ _) .leaf => .inner 3 rlk rlv (.inner 1 k v .leaf .leaf) (.inner 1 rk rv .leaf .leaf)
-    | inner rs rk rv rl@(.inner rls rlk rlv rll rlr) rr@(.inner rrs _ _ _ _) =>
-        if rls < ratio * rrs then .inner (1 + rs) rk rv (.inner (1 + rls) k v .leaf rl) rr
-        else .inner (1 + rs) rlk rlv (.inner (1 + rll.size) k v .leaf rll) (.inner (1 + rrs + rlr.size) rk rv rlr rr)
+    | _ => panic! "Unexpected"
   | l@(inner ls _ _ _ _) => match r with
     | leaf => .inner (1 + ls) k v l .leaf
     | r@(inner rs rk rv rl rr) =>
@@ -66,13 +61,11 @@ instance : Inhabited (TreeNode α β) where
           | _, _ => panic! "Unexpected case"
         else .inner (1 + ls + rs) k v l r
 
-variable {m : Type → Type} [Monad m]
-
-@[specialize] def insert (cmp : α → α → m Ordering) (k : α) (v : β) : TreeNode α β → m (TreeNode α β)
-| leaf => pure <| .inner 1 k v .leaf .leaf
-| inner sz ky y l r => do match (← cmp k ky) with
-    | .lt => return balanceL ky y (← insert cmp k v l) r
-    | .eq => return .inner sz ky v l r
-    | .gt => return balanceR ky y l (← insert cmp k v r)
+@[specialize] def insert (cmp : α → α → Ordering) (k : α) (v : β) : TreeNode α β → TreeNode α β
+| leaf => .inner 1 k v .leaf .leaf
+| inner sz ky y l r => match cmp k ky with
+    | .lt => balanceL ky y (insert cmp k v l) r
+    | .eq => .inner sz ky v l r
+    | .gt => balanceR ky y l (insert cmp k v r)
 
 end TreeNode
