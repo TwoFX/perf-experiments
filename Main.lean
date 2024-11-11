@@ -1,11 +1,7 @@
 set_option autoImplicit false
 
-universe u v
-
-variable {α : Type}
-
-inductive TreeNode (α : Type) where
-  | inner (size : Nat) (k : α) (l r : TreeNode α)
+inductive TreeNode where
+  | inner (size : Nat) (l r : TreeNode)
   | leaf
 
 namespace TreeNode
@@ -16,34 +12,34 @@ def delta : Nat := 3
 def ratio : Nat := 2
 
 @[inline]
-def size : TreeNode α → Nat
-  | inner s _ _ _ => s
+def size : TreeNode → Nat
+  | inner s _ _ => s
   | leaf => 0
 
-instance : Inhabited (TreeNode α) where
+instance : Inhabited TreeNode where
   default := .leaf
 
-@[inline] def balanceR (k : α) (l r : TreeNode α) : TreeNode α :=
+@[inline] def balanceR (l r : TreeNode) : TreeNode :=
   match l with
   | leaf => match r with
-    | leaf => .inner 1 k .leaf .leaf
-    | r@(inner _ _ .leaf .leaf) => .inner 2 k .leaf r
-    | inner _ rk .leaf rr@(.inner _ _ _ _) => .inner 3 rk (.inner 1 k .leaf .leaf) rr
-    | inner _ rk (.inner _ rlk _ _) .leaf => .inner 3 rlk (.inner 1 k .leaf .leaf) (.inner 1 rk .leaf .leaf)
+    | leaf => .inner 1 .leaf .leaf
+    | r@(inner _ .leaf .leaf) => .inner 2 .leaf r
+    | inner _ .leaf rr@(.inner _ _ _) => .inner 3 (.inner 1 .leaf .leaf) rr
+    | inner _ (.inner _ _ _) .leaf => .inner 3 (.inner 1 .leaf .leaf) (.inner 1 .leaf .leaf)
     | _ => panic! "Unexpected"
-  | l@(inner ls _ _ _) => match r with
-    | leaf => .inner (1 + ls) k l .leaf
-    | r@(inner rs rk rl rr) =>
+  | l@(inner ls _ _) => match r with
+    | leaf => .inner (1 + ls) l .leaf
+    | r@(inner rs rl rr) =>
         if rs > delta * ls then match rl, rr with
-          | inner rls rlk rll rlr, .inner rrs _ _ _ =>
-              if rls < ratio * rrs then .inner (1 + ls + rs) rk (.inner (1 + ls + rls) k l rl) rr
-              else .inner (1 + ls + rs) rlk (.inner (1 + ls + rll.size) k l rll) (.inner (1 + rrs + rlr.size) rk rlr rr)
+          | inner rls rll rlr, .inner rrs _ _ =>
+              if rls < ratio * rrs then .inner (1 + ls + rs) (.inner (1 + ls + rls) l rl) rr
+              else .inner (1 + ls + rs) (.inner (1 + ls + rll.size) l rll) (.inner (1 + rrs + rlr.size) rlr rr)
           | _, _ => panic! "Unexpected case"
-        else .inner (1 + ls + rs) k l r
+        else .inner (1 + ls + rs) l r
 
-def insert (k : α) : TreeNode α → TreeNode α
-| leaf => .inner 1 k .leaf .leaf
-| inner _ ky l r => balanceR ky l (insert k r)
+def insert : TreeNode → TreeNode
+| leaf => .inner 1 .leaf .leaf
+| inner _ l r => balanceR l (insert r)
 
 end TreeNode
 
@@ -51,11 +47,11 @@ open Lean
 
 def sz : Nat := 300000
 
-@[noinline] def growInsertB (numbers : Array Nat) : IO (TreeNode Nat) := do
-  let mut m : TreeNode Nat := .leaf
+@[noinline] def growInsertB (numbers : Array Nat) : IO TreeNode := do
+  let mut m : TreeNode := .leaf
   let mut i := 0
-  for s in numbers do
-    m := m.insert s
+  for _ in numbers do
+    m := m.insert
     i := i + 1
   return m
 
