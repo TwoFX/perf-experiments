@@ -43,7 +43,7 @@ instance : Inhabited (TreeNode α β) where
           | inner lls _ _ _ _, inner lrs lrk lrv lrl lrr =>
               if lrs < ratio * lls then .inner (1 + ls + rs) lk lv ll (.inner (1 + rs + lrs) k v lr r)
               else .inner (1 + ls + rs) lrk lrv (.inner (1 + lls + lrl.size) lk lv ll lrl) (.inner (1 + rs + lrr.size) k v lrr r)
-          | _, _ => False.elim sorry
+          | _, _ => panic! "Unexpected case"
         else .inner (1 + ls + rs) k v l r
 
 @[inline] def balanceR (k : α) (v : β) (l r : TreeNode α β) : TreeNode α β :=
@@ -63,7 +63,7 @@ instance : Inhabited (TreeNode α β) where
           | inner rls rlk rlv rll rlr, .inner rrs _ _ _ _ =>
               if rls < ratio * rrs then .inner (1 + ls + rs) rk rv (.inner (1 + ls + rls) k v l rl) rr
               else .inner (1 + ls + rs) rlk rlv (.inner (1 + ls + rll.size) k v l rll) (.inner (1 + rrs + rlr.size) rk rv rlr rr)
-          | _, _ => False.elim sorry
+          | _, _ => panic! "Unexpected case"
         else .inner (1 + ls + rs) k v l r
 
 variable {m : Type → Type} [Monad m]
@@ -74,39 +74,5 @@ variable {m : Type → Type} [Monad m]
     | .lt => return balanceL ky y (← insert cmp k v l) r
     | .eq => return .inner sz ky v l r
     | .gt => return balanceR ky y l (← insert cmp k v r)
-
-@[specialize] def find (cmp : α → α → m Ordering) (k : α) : TreeNode α β → m (Option β)
-| leaf => pure none
-| inner _ ky y l r => do
-    match ← cmp k ky with
-    | .lt => find cmp k l
-    | .gt => find cmp k r
-    | .eq => return some y
-
-@[specialize] def insertionPoint (cmp : α → α → m Ordering) (k : α) (t : TreeNode α β) : m Nat :=
-  go 0 t
-where
-  @[specialize] go (sofar : Nat) : TreeNode α β → m Nat
-  | leaf => pure sofar
-  | inner _ ky _ l r => do
-    match ← cmp k ky with
-    | .lt => go sofar l
-    | .eq => return sofar + size l
-    | .gt => go (sofar + 1 + size l) r
-
-def inversions (l : List Nat) : Nat := Id.run do
-  let mut m : TreeNode Nat Unit := .leaf
-  let mut ans := 0
-  for x in l do
-    let insPt : Nat := insertionPoint (m := Id) Ord.compare x m
-    ans := ans + (m.size - insPt)
-    m := m.insert (m := Id) Ord.compare x ()
-  return ans
-
--- #eval! inversions [6,5,4,3,2,7,1]
-
-def depth : TreeNode α β → Nat
-| leaf => 0
-| inner _ _ _ l r => 1 + max l.depth r.depth
 
 end TreeNode
