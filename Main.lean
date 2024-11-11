@@ -13,7 +13,8 @@ def size : TreeNode α → Nat
   | inner s _ _ _ => s
   | leaf => 0
 
-@[inline] def balanceR (k : α) (l r : TreeNode α) : TreeNode α :=
+@[inline]
+def balanceR (k : α) (l r : TreeNode α) : TreeNode α :=
   match l with
   | leaf => match r with
     | leaf => .inner 1 k .leaf .leaf
@@ -26,8 +27,7 @@ def size : TreeNode α → Nat
     | r@(inner rs rk rl rr) =>
         if rs > 3 * ls then match rl, rr with
           | inner rls rlk rll rlr, .inner rrs _ _ _ =>
-              if rls < 2 * rrs then .inner (1 + ls + rs) rk (.inner (1 + ls + rls) k l rl) rr
-              else .inner (1 + ls + rs) rlk (.inner (1 + ls + rll.size) k l rll) (.inner (1 + rrs + rlr.size) rk rlr rr)
+              .inner (1 + ls + rs) rk (.inner (1 + ls + rls) k l rl) rr
           | _, _ => False.elim sorry
         else .inner (1 + ls + rs) k l r
 
