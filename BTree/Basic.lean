@@ -256,7 +256,7 @@ def splitInternalIfNecessary (keys : Array α) (values : Array β) (children : A
 instance : Inhabited { n' : BTreeNode α β // n'.WF } := sorry
 instance : Inhabited (InsertResult α β) := sorry
 
-set_option trace.compiler.ir.reset_reuse true in
+-- set_option trace.compiler.ir.reset_reuse true in
 partial def insert (cmp : α → α → Ordering) (key : α) (value : β) (n : BTreeNode α β) (hn : n.WF) :
     { n' : BTreeNode α β // n'.WF } :=
   match go n hn with
