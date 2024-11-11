@@ -1,80 +1,55 @@
 set_option autoImplicit false
 
-universe u v
+variable {α : Type}
 
-variable {α : Type} {β : Type}
-
-inductive TreeNode (α : Type) (β : Type) where
-  | inner (size : Nat) (k : α) (v : β) (l r : TreeNode α β)
+inductive TreeNode (α : Type) where
+  | inner (size : Nat) (k : α) (l r : TreeNode α)
   | leaf
 
 namespace TreeNode
 
 @[inline]
-def delta : Nat := 3
-@[inline]
-def ratio : Nat := 2
-
-@[inline]
-def size : TreeNode α β → Nat
-  | inner s _ _ _ _ => s
+def size : TreeNode α → Nat
+  | inner s _ _ _ => s
   | leaf => 0
 
-instance : Inhabited (TreeNode α β) where
-  default := .leaf
-
-@[inline] def balanceR (k : α) (v : β) (l r : TreeNode α β) : TreeNode α β :=
+@[inline] def balanceR (k : α) (l r : TreeNode α) : TreeNode α :=
   match l with
   | leaf => match r with
-    | leaf => .inner 1 k v .leaf .leaf
-    | r@(inner _ _ _ .leaf .leaf) => .inner 2 k v .leaf r
-    | inner _ rk rv .leaf rr@(.inner _ _ _ _ _) => .inner 3 rk rv (.inner 1 k v .leaf .leaf) rr
-    | inner _ rk rv (.inner _ rlk rlv _ _) .leaf => .inner 3 rlk rlv (.inner 1 k v .leaf .leaf) (.inner 1 rk rv .leaf .leaf)
+    | leaf => .inner 1 k .leaf .leaf
+    | r@(inner _ _ .leaf .leaf) => .inner 2 k .leaf r
+    | inner _ rk .leaf rr@(.inner _ _ _ _) => .inner 3 rk (.inner 1 k .leaf .leaf) rr
+    | inner _ rk (.inner _ rlk _ _) .leaf => .inner 3 rlk (.inner 1 k .leaf .leaf) (.inner 1 rk .leaf .leaf)
     | _ => False.elim sorry
-  | l@(inner ls _ _ _ _) => match r with
-    | leaf => .inner (1 + ls) k v l .leaf
-    | r@(inner rs rk rv rl rr) =>
-        if rs > delta * ls then match rl, rr with
-          | inner rls rlk rlv rll rlr, .inner rrs _ _ _ _ =>
-              if rls < ratio * rrs then .inner (1 + ls + rs) rk rv (.inner (1 + ls + rls) k v l rl) rr
-              else .inner (1 + ls + rs) rlk rlv (.inner (1 + ls + rll.size) k v l rll) (.inner (1 + rrs + rlr.size) rk rv rlr rr)
+  | l@(inner ls _ _ _) => match r with
+    | leaf => .inner (1 + ls) k l .leaf
+    | r@(inner rs rk rl rr) =>
+        if rs > 3 * ls then match rl, rr with
+          | inner rls rlk rll rlr, .inner rrs _ _ _ =>
+              if rls < 2 * rrs then .inner (1 + ls + rs) rk (.inner (1 + ls + rls) k l rl) rr
+              else .inner (1 + ls + rs) rlk (.inner (1 + ls + rll.size) k l rll) (.inner (1 + rrs + rlr.size) rk rlr rr)
           | _, _ => False.elim sorry
-        else .inner (1 + ls + rs) k v l r
+        else .inner (1 + ls + rs) k l r
 
-@[specialize] def insert (cmp : α → α → Ordering) (k : α) (v : β) : TreeNode α β → TreeNode α β
-| leaf => .inner 1 k v .leaf .leaf
-| inner sz ky y l r => match cmp k ky with
-    | .gt => balanceR ky y l (insert cmp k v r)
-    | _ => .inner sz ky v l r
+@[specialize] def insert (cmp : α → α → Ordering) (k : α) : TreeNode α → TreeNode α
+| leaf => .inner 1 k .leaf .leaf
+| inner sz ky l r => match cmp k ky with
+    | .gt => balanceR ky l (insert cmp k r)
+    | _ => .inner sz ky l r
 
 end TreeNode
 
 open Lean
 
-def mkStrings (num : Nat) : Array Nat := Id.run do
-  let mut ans := #[]
-  for i in [0:num] do
-    ans := ans.push i
-  ans
-
-@[noinline] def mkMyStrings (num : Nat) : IO (Array Nat) := do
-  return  (mkStrings num)
-
 def sz : Nat := 300000
 
-@[noinline] def growInsertB (strings : Array Nat) : TreeNode Nat Nat := Id.run do
-  let mut m : TreeNode Nat Nat := .leaf
-  let mut i := 0
-  for s in strings do
-    m := m.insert Ord.compare s i
-    i := i + 1
+@[noinline] def growInsertB : IO (TreeNode Nat) := do
+  let mut m : TreeNode Nat := .leaf
+  for d in [:sz] do
+    m := m.insert Ord.compare d
   return m
 
-@[noinline] def growInsertB' (a : Array Nat) : IO (TreeNode Nat Nat) := do
-  return growInsertB a
-
 def main : IO Unit := do
-  let strings ← mkMyStrings sz
   for _ in [:5] do
-    let _ ← timeit "" $ growInsertB' strings
+    let _ ← timeit "" $ growInsertB
   println! "-------------------"
