@@ -33,13 +33,14 @@ end TreeNode
 
 def sz : Nat := 1000000
 
-@[noinline] def growInsertB : IO TreeNode := do
+@[noinline] def growInsertB (numbers : Array Nat) : IO TreeNode := do
   let mut m : TreeNode := .leaf
-  for _ in [:sz] do
+  for _ in numbers do
     m := m.insert
   return m
 
 def main : IO Unit := do
+  let numbers := Array.range sz
   for _ in [:5] do
-    let _ ← timeit "" growInsertB
+    let _ ← timeit "" $ growInsertB numbers
   println! "-------------------"
