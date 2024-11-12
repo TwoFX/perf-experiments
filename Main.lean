@@ -14,14 +14,11 @@ namespace TreeNode
     match cmp k ky with
     | .gt =>
         let r := insert cmp k r₀
-        let l := l₀
-        match l with
+        match l₀ with
         | leaf => match r with
           | leaf => .inner 1 k .leaf .leaf
           | r@(inner _ _ .leaf .leaf) => .inner 2 k .leaf r
-          | inner _ rk .leaf rr@(.inner _ _ _ _) => .inner 3 rk (.inner 1 k .leaf .leaf) rr
-          | inner _ rk (.inner _ rlk _ _) .leaf => .inner 3 rlk (.inner 1 k .leaf .leaf) (.inner 1 rk .leaf .leaf)
-          | _ => False.elim sorry
+          | inner _ rk _ rr => .inner 3 rk (.inner 1 k .leaf .leaf) rr
         | l@(inner ls _ _ _) => match r with
           | leaf => .inner (1 + ls) k l .leaf
           | r@(inner rs rk rl rr) =>
@@ -36,7 +33,7 @@ end TreeNode
 
 @[noinline] def growInsertB : IO (TreeNode Nat) := do
   let mut m : TreeNode Nat := .leaf
-  for d in [:1000000] do
+  for d in [:10000000] do
     m := m.insert Ord.compare d
   return m
 
